@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administration — Goly Express</title>
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12172b">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --night:#12172b; --night-2:#1b2140;
+    --orange:#f2650a; --orange-2:#ff7e29; --gold:#f5b700; --green:#3fa66b;
+    --red:#d0453a; --blue:#3b6fd6;
+    --sand:#f6f1e6; --sand-2:#ece3d2;
+    --ink:#20222c; --ink-soft:#5b5d6b;
+    --white:#fffdf9; --line:#e2d9c6; --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--sand);color:var(--ink);font-family:'Work Sans',sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.02em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;border:none;}
+  select,input{font-family:inherit;}
+  .wrap{max-width:920px;margin:0 auto;padding:0 1.4rem;}
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 100% at 20% 0%, var(--night-2) 0%, var(--night) 55%, #0a0d1a 100%);
+    padding:1.5rem;
+  }
+  .login-card{background:var(--white);border-radius:20px;padding:2.4rem 2rem;width:100%;max-width:380px;box-shadow:0 30px 60px -20px rgba(0,0,0,0.4);}
+  .login-logo{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;}
+  .login-logo .dot{width:10px;height:10px;border-radius:50%;background:var(--orange);}
+  .login-logo span{color:var(--orange);}
+  .login-sub{color:var(--ink-soft);font-size:0.9rem;margin-bottom:1.8rem;}
+  .form-group{margin-bottom:1.2rem;}
+  .form-group label{display:block;font-weight:600;font-size:0.88rem;margin-bottom:0.5rem;}
+  .form-control{width:100%;padding:0.8rem 1rem;border:1.5px solid var(--line);border-radius:9px;font-size:1rem;background:var(--sand);outline:none;}
+  .form-control:focus{border-color:var(--orange);background:var(--white);}
+  .login-btn{width:100%;background:var(--orange);color:var(--white);padding:0.9rem;border-radius:9px;font-weight:700;font-size:1rem;margin-top:0.4rem;}
+  .login-btn:hover{background:var(--orange-2);}
+  .login-error{color:var(--red);font-size:0.85rem;margin-top:0.9rem;display:none;}
+
+  /* ---------- DASHBOARD ---------- */
+  #dashScreen{display:none;}
+  header.dash{background:var(--night);color:var(--white);padding:1.1rem 0;position:sticky;top:0;z-index:10;}
+  .dash-top{display:flex;align-items:center;justify-content:space-between;}
+  .dash-title{font-weight:700;font-size:1.05rem;font-family:'Space Grotesk',sans-serif;}
+  .logout-btn{background:none;color:rgba(255,253,249,0.7);font-size:0.82rem;text-decoration:underline;}
+
+  main.dash{padding:1.6rem 0 3rem;}
+  .tabs{display:flex;gap:0.4rem;margin-bottom:1.4rem;overflow-x:auto;}
+  .tab{white-space:nowrap;padding:0.6rem 1rem;border-radius:9px;font-weight:600;font-size:0.85rem;background:var(--white);border:1.5px solid var(--line);color:var(--ink-soft);}
+  .tab.active{background:var(--night);color:var(--white);border-color:var(--night);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* Stats */
+  .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.9rem;}
+  @media(min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
+  .stat-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:1.2rem;}
+  .stat-card .num{font-family:'Space Grotesk',sans-serif;font-size:1.7rem;font-weight:800;color:var(--night);}
+  .stat-card .label{font-size:0.78rem;color:var(--ink-soft);margin-top:0.2rem;}
+
+  /* Filter chips */
+  .filters{display:flex;gap:0.4rem;margin-bottom:1.1rem;flex-wrap:wrap;}
+  .chip{padding:0.4rem 0.85rem;border-radius:50px;font-size:0.8rem;font-weight:600;background:var(--white);border:1.5px solid var(--line);color:var(--ink-soft);}
+  .chip.active{background:var(--orange);border-color:var(--orange);color:var(--white);}
+
+  /* Cards */
+  .card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:1.1rem 1.2rem;margin-bottom:0.8rem;}
+  .card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;flex-wrap:wrap;gap:0.4rem;}
+  .billet{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--ink-soft);}
+  .billet b{color:var(--night);}
+  .badge{font-size:0.7rem;font-weight:700;text-transform:uppercase;padding:0.22rem 0.6rem;border-radius:6px;letter-spacing:0.03em;}
+  .badge.en_attente{background:rgba(245,183,0,0.15);color:#8a6600;}
+  .badge.coursier_affecte{background:rgba(59,111,214,0.12);color:var(--blue);}
+  .badge.en_route{background:rgba(242,101,10,0.12);color:var(--orange);}
+  .badge.livre{background:rgba(63,166,107,0.14);color:var(--green);}
+  .badge.annule{background:rgba(208,69,58,0.12);color:var(--red);}
+
+  .route-line{font-size:0.9rem;color:var(--ink);margin-bottom:0.6rem;}
+  .meta-row{font-size:0.82rem;color:var(--ink-soft);margin-bottom:0.8rem;}
+  .meta-row a{color:var(--night);font-weight:600;}
+
+  .card-controls{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;}
+  .card-controls select, .card-controls input{
+    padding:0.5rem 0.7rem;border:1.5px solid var(--line);border-radius:8px;font-size:0.85rem;background:var(--sand);
+  }
+  .card-controls input.prix{width:100px;}
+  .mini-btn{padding:0.5rem 0.9rem;border-radius:8px;font-size:0.82rem;font-weight:700;background:var(--night);color:var(--white);}
+  .mini-btn.danger{background:var(--red);}
+  .mini-btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ink-soft);}
+
+  .empty{text-align:center;color:var(--ink-soft);padding:3rem 1rem;font-size:0.92rem;}
+
+  /* Coursiers / zones list */
+  .list-row{
+    display:flex;align-items:center;justify-content:space-between;gap:0.8rem;
+    background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:0.9rem 1.1rem;margin-bottom:0.7rem;flex-wrap:wrap;
+  }
+  .list-row .who{font-weight:600;font-size:0.94rem;}
+  .list-row .sub{font-size:0.8rem;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;}
+  .dot-status{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;}
+  .dot-status.disponible{background:var(--green);}
+  .dot-status.en_course{background:var(--orange);}
+  .dot-status.hors_ligne{background:var(--ink-soft);}
+
+  .add-form{
+    background:var(--white);border:1.5px dashed var(--line);border-radius:var(--radius);
+    padding:1.2rem;margin-bottom:1.2rem;display:grid;gap:0.7rem;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));align-items:end;
+  }
+  .add-form .fg{display:flex;flex-direction:column;gap:0.35rem;}
+  .add-form label{font-size:0.78rem;font-weight:600;color:var(--ink-soft);}
+  .add-form input{padding:0.6rem 0.8rem;border:1.5px solid var(--line);border-radius:8px;background:var(--sand);}
+  .add-form button{grid-column:1/-1;}
+</style>
+</head>
+<body>
+
+<!-- ============ ÉCRAN DE CONNEXION ============ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo"><span class="dot"></span>Goly<span>Express</span></div>
+    <div class="login-sub">Administration</div>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="loginPassword">Mot de passe administrateur</label>
+        <input type="password" id="loginPassword" class="form-control" required>
+      </div>
+      <button type="submit" class="login-btn">Se connecter</button>
+      <div class="login-error" id="loginError">Mot de passe incorrect.</div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ TABLEAU DE BORD ============ -->
+<div id="dashScreen">
+  <header class="dash">
+    <div class="wrap">
+      <div class="dash-top">
+        <div class="dash-title">Administration Goly Express</div>
+        <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <div class="wrap">
+      <div class="tabs">
+        <button class="tab active" data-panel="stats">Aperçu</button>
+        <button class="tab" data-panel="commandes">Commandes</button>
+        <button class="tab" data-panel="coursiers">Coursiers</button>
+        <button class="tab" data-panel="tarifs">Tarifs</button>
+      </div>
+
+      <!-- APERÇU -->
+      <div class="panel active" id="panel-stats">
+        <div class="stats-grid" id="statsGrid"></div>
+      </div>
+
+      <!-- COMMANDES -->
+      <div class="panel" id="panel-commandes">
+        <div class="filters" id="orderFilters">
+          <button class="chip active" data-filter="all">Toutes</button>
+          <button class="chip" data-filter="en_attente">En attente</button>
+          <button class="chip" data-filter="coursier_affecte">Affectées</button>
+          <button class="chip" data-filter="en_route">En route</button>
+          <button class="chip" data-filter="livre">Livrées</button>
+          <button class="chip" data-filter="annule">Annulées</button>
+        </div>
+        <div id="ordersList"></div>
+      </div>
+
+      <!-- COURSIERS -->
+      <div class="panel" id="panel-coursiers">
+        <div class="add-form" id="addCoursierForm">
+          <div class="fg"><label>Nom</label><input id="newCoursierNom" placeholder="Yao Kouassi"></div>
+          <div class="fg"><label>Téléphone</label><input id="newCoursierTel" placeholder="0749365545"></div>
+          <div class="fg"><label>Code PIN</label><input id="newCoursierPin" placeholder="1234" maxlength="4"></div>
+          <div class="fg"><label>Véhicule</label><input id="newCoursierVehicule" placeholder="moto" value="moto"></div>
+          <button class="mini-btn" id="addCoursierBtn">+ Ajouter un coursier</button>
+        </div>
+        <div id="coursiersList"></div>
+      </div>
+
+      <!-- TARIFS -->
+      <div class="panel" id="panel-tarifs">
+        <div class="add-form" id="addZoneForm">
+          <div class="fg"><label>Nom de la zone</label><input id="newZoneNom" placeholder="Belleville"></div>
+          <div class="fg"><label>Tarif de base (FCFA)</label><input id="newZoneBase" type="number" placeholder="500"></div>
+          <div class="fg"><label>Tarif / km (FCFA)</label><input id="newZoneKm" type="number" placeholder="150"></div>
+          <button class="mini-btn" id="addZoneBtn">+ Ajouter une zone</button>
+        </div>
+        <div id="zonesList"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ============================================================
+  // CONFIGURATION
+  // ============================================================
+  const CONFIG = {
+    SUPABASE_URL: "",
+    SUPABASE_ANON_KEY: "",
+    // Choisis un mot de passe et remplace la valeur ci-dessous.
+    // ⚠️ Ce mot de passe est visible dans le code source du site — voir
+    // la note de sécurité dans supabase-migration-phase3.sql.
+    ADMIN_PASSWORD: "golyexpress2026"
+  };
+
+  const supabase = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
+    ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
+    : null;
+
+  const STATUT_LABELS = {
+    en_attente: 'En attente', coursier_affecte: 'Affectée',
+    en_route: 'En route', livre: 'Livrée', annule: 'Annulée'
+  };
+
+  let allCoursiers = [];
+  let currentFilter = 'all';
+  let realtimeChannel = null;
+
+  // ---------- Connexion ----------
+  document.getElementById('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('loginError');
+    const pwd = document.getElementById('loginPassword').value;
+    if (pwd !== CONFIG.ADMIN_PASSWORD) {
+      errEl.style.display = 'block';
+      return;
+    }
+    errEl.style.display = 'none';
+    sessionStorage.setItem('goly_admin_ok', '1');
+    enterDashboard();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('goly_admin_ok');
+    document.getElementById('dashScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  });
+
+  if (sessionStorage.getItem('goly_admin_ok') === '1') enterDashboard();
+
+  function enterDashboard() {
+    if (!supabase) {
+      alert("Le site n'est pas encore connecté à la base de données. Voir GUIDE-CONFIGURATION.md.");
+    }
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashScreen').style.display = 'block';
+    loadAll();
+    subscribeRealtime();
+  }
+
+  // ---------- Onglets ----------
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+    });
+  });
+
+  // ---------- Chargement général ----------
+  async function loadAll() {
+    if (!supabase) return;
+    const { data: coursiers } = await supabase.from('coursiers').select('*').order('created_at', { ascending: true });
+    allCoursiers = coursiers || [];
+    await Promise.all([loadStats(), loadOrders(), renderCoursiers(), loadZones()]);
+  }
+
+  // ---------- Aperçu / stats ----------
+  async function loadStats() {
+    const { data: orders } = await supabase.from('commandes').select('statut, prix, created_at');
+    const list = orders || [];
+    const counts = { en_attente: 0, coursier_affecte: 0, en_route: 0, livre: 0, annule: 0 };
+    let revenue = 0;
+    const today = new Date().toDateString();
+    let todayCount = 0;
+    list.forEach(o => {
+      counts[o.statut] = (counts[o.statut] || 0) + 1;
+      if (o.statut === 'livre' && o.prix) revenue += Number(o.prix);
+      if (new Date(o.created_at).toDateString() === today) todayCount++;
+    });
+    const cards = [
+      { num: list.length, label: 'Commandes au total' },
+      { num: todayCount, label: "Commandes aujourd'hui" },
+      { num: counts.en_attente + counts.coursier_affecte + counts.en_route, label: 'Courses actives' },
+      { num: counts.livre, label: 'Livrées' },
+      { num: revenue.toLocaleString('fr-FR') + ' FCFA', label: 'Chiffre estimé (livrées)' },
+      { num: allCoursiers.filter(c => c.statut === 'disponible').length, label: 'Coursiers disponibles' }
+    ];
+    document.getElementById('statsGrid').innerHTML = cards.map(c =>
+      `<div class="stat-card"><div class="num">${c.num}</div><div class="label">${c.label}</div></div>`
+    ).join('');
+  }
+
+  // ---------- Commandes ----------
+  document.querySelectorAll('#orderFilters .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#orderFilters .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter;
+      loadOrders();
+    });
+  });
+
+  async function loadOrders() {
+    if (!supabase) return;
+    let query = supabase.from('commandes').select('*').order('created_at', { ascending: false }).limit(100);
+    if (currentFilter !== 'all') query = query.eq('statut', currentFilter);
+    const { data } = await query;
+    renderOrders(data || []);
+  }
+
+  function renderOrders(orders) {
+    const container = document.getElementById('ordersList');
+    container.innerHTML = '';
+    if (orders.length === 0) {
+      container.innerHTML = '<div class="empty">Aucune commande dans cette catégorie.</div>';
+      return;
+    }
+    orders.forEach(o => container.appendChild(buildOrderCard(o)));
+  }
+
+  function buildOrderCard(order) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const coursierOptions = ['<option value="">— non affecté —</option>']
+      .concat(allCoursiers.map(c => `<option value="${c.id}" ${c.id === order.coursier_id ? 'selected' : ''}>${c.nom}</option>`))
+      .join('');
+
+    const statutOptions = Object.keys(STATUT_LABELS).map(s =>
+      `<option value="${s}" ${s === order.statut ? 'selected' : ''}>${STATUT_LABELS[s]}</option>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="billet">Billet <b>${order.numero_billet}</b> · ${order.type || '—'}</div>
+        <span class="badge ${order.statut}">${STATUT_LABELS[order.statut] || order.statut}</span>
+      </div>
+      <div class="route-line">${order.depart} → ${order.arrivee}</div>
+      <div class="meta-row">Client : <a href="tel:${order.telephone}">${order.telephone}</a></div>
+      <div class="card-controls">
+        <select class="sel-coursier" data-id="${order.id}">${coursierOptions}</select>
+        <select class="sel-statut" data-id="${order.id}">${statutOptions}</select>
+        <input type="number" class="prix" placeholder="Prix FCFA" value="${order.prix || ''}" data-id="${order.id}">
+        <button class="mini-btn" data-action="save" data-id="${order.id}">Enregistrer</button>
+      </div>
+    `;
+
+    card.querySelector('[data-action="save"]').addEventListener('click', async () => {
+      const coursierId = card.querySelector('.sel-coursier').value || null;
+      const statut = card.querySelector('.sel-statut').value;
+      const prixVal = card.querySelector('.prix').value;
+      const { error } = await supabase.from('commandes').update({
+        coursier_id: coursierId,
+        statut: statut,
+        prix: prixVal ? Number(prixVal) : null
+      }).eq('id', order.id);
+      if (error) alert("Erreur lors de l'enregistrement.");
+      else loadOrders();
+    });
+
+    return card;
+  }
+
+  // ---------- Coursiers ----------
+  async function renderCoursiers() {
+    const container = document.getElementById('coursiersList');
+    container.innerHTML = '';
+    if (allCoursiers.length === 0) {
+      container.innerHTML = '<div class="empty">Aucun coursier enregistré pour l\'instant.</div>';
+      return;
+    }
+    allCoursiers.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'list-row';
+      row.innerHTML = `
+        <div>
+          <div class="who"><span class="dot-status ${c.statut}"></span>${c.nom}</div>
+          <div class="sub">${c.telephone} · ${c.vehicule || 'moto'}</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <span class="badge ${c.actif ? 'livre' : 'annule'}">${c.actif ? 'Actif' : 'Désactivé'}</span>
+          <button class="mini-btn ghost" data-action="toggle" data-id="${c.id}" data-actif="${c.actif}">
+            ${c.actif ? 'Désactiver' : 'Réactiver'}
+          </button>
+        </div>
+      `;
+      row.querySelector('[data-action="toggle"]').addEventListener('click', async (e) => {
+        const newActif = !(e.target.dataset.actif === 'true');
+        await supabase.from('coursiers').update({ actif: newActif }).eq('id', c.id);
+        loadAll();
+      });
+      container.appendChild(row);
+    });
+  }
+
+  document.getElementById('addCoursierBtn').addEventListener('click', async () => {
+    const nom = document.getElementById('newCoursierNom').value.trim();
+    const tel = document.getElementById('newCoursierTel').value.trim();
+    const pin = document.getElementById('newCoursierPin').value.trim();
+    const vehicule = document.getElementById('newCoursierVehicule').value.trim() || 'moto';
+    if (!nom || !tel || pin.length !== 4) { alert('Nom, téléphone et PIN à 4 chiffres requis.'); return; }
+    const { error } = await supabase.from('coursiers').insert({
+      nom, telephone: tel, pin_code: pin, vehicule, statut: 'hors_ligne', actif: true
+    });
+    if (error) { alert("Erreur : ce numéro existe peut-être déjà."); return; }
+    document.getElementById('newCoursierNom').value = '';
+    document.getElementById('newCoursierTel').value = '';
+    document.getElementById('newCoursierPin').value = '';
+    loadAll();
+  });
+
+  // ---------- Zones tarifaires ----------
+  async function loadZones() {
+    if (!supabase) return;
+    const { data } = await supabase.from('zones_tarifs').select('*').order('nom_zone', { ascending: true });
+    renderZones(data || []);
+  }
+
+  function renderZones(zones) {
+    const container = document.getElementById('zonesList');
+    container.innerHTML = '';
+    if (zones.length === 0) {
+      container.innerHTML = '<div class="empty">Aucune zone tarifaire configurée.</div>';
+      return;
+    }
+    zones.forEach(z => {
+      const row = document.createElement('div');
+      row.className = 'list-row';
+      row.innerHTML = `
+        <div class="who">${z.nom_zone}</div>
+        <div class="card-controls">
+          <input type="number" class="base" value="${z.tarif_base}" style="width:100px;">
+          <input type="number" class="km" value="${z.tarif_km}" style="width:100px;">
+          <button class="mini-btn" data-action="save">Enregistrer</button>
+        </div>
+      `;
+      row.querySelector('[data-action="save"]').addEventListener('click', async () => {
+        const base = Number(row.querySelector('.base').value);
+        const km = Number(row.querySelector('.km').value);
+        await supabase.from('zones_tarifs').update({ tarif_base: base, tarif_km: km }).eq('id', z.id);
+        loadZones();
+      });
+      container.appendChild(row);
+    });
+  }
+
+  document.getElementById('addZoneBtn').addEventListener('click', async () => {
+    const nom = document.getElementById('newZoneNom').value.trim();
+    const base = Number(document.getElementById('newZoneBase').value) || 500;
+    const km = Number(document.getElementById('newZoneKm').value) || 150;
+    if (!nom) { alert('Nom de zone requis.'); return; }
+    const { error } = await supabase.from('zones_tarifs').insert({ nom_zone: nom, tarif_base: base, tarif_km: km });
+    if (error) { alert('Erreur lors de l\'ajout.'); return; }
+    document.getElementById('newZoneNom').value = '';
+    document.getElementById('newZoneBase').value = '';
+    document.getElementById('newZoneKm').value = '';
+    loadZones();
+  });
+
+  // ---------- Temps réel ----------
+  function subscribeRealtime() {
+    if (!supabase) return;
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    realtimeChannel = supabase.channel('admin-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'commandes' }, () => { loadOrders(); loadStats(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coursiers' }, () => loadAll())
+      .subscribe();
+  }
+</script>
+
+</body>
+</html>
