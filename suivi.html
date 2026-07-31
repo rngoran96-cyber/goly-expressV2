@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivre ma commande — Goly Express</title>
+<meta name="description" content="Suivez votre course Goly Express en temps réel.">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12172b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Leaflet (carte, gratuit, sans clé API) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Supabase (base de données + temps réel) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --night:#12172b; --night-2:#1b2140;
+    --orange:#f2650a; --orange-2:#ff7e29; --gold:#f5b700; --green:#3fa66b;
+    --red:#d0453a;
+    --sand:#f6f1e6; --sand-2:#ece3d2;
+    --ink:#20222c; --ink-soft:#5b5d6b;
+    --white:#fffdf9; --line:#e2d9c6; --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--sand);color:var(--ink);font-family:'Work Sans',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.02em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:720px;margin:0 auto;padding:0 1.75rem;}
+
+  header{background:var(--night);color:var(--white);padding:1.2rem 0;}
+  .logo{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.3rem;display:flex;align-items:center;gap:0.5rem;}
+  .logo .dot{width:10px;height:10px;border-radius:50%;background:var(--orange);}
+  .logo span{color:var(--orange-2);}
+
+  main{padding:2.5rem 0 4rem;}
+
+  .lookup-card{
+    background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.6rem;margin-bottom:1.6rem;
+  }
+  .lookup-card label{display:block;font-weight:600;font-size:0.88rem;margin-bottom:0.5rem;}
+  .lookup-row{display:flex;gap:0.7rem;}
+  .lookup-row input{
+    flex:1;padding:0.75rem 1rem;border:1.5px solid var(--line);border-radius:9px;
+    font-family:'JetBrains Mono',monospace;font-size:0.95rem;outline:none;background:var(--sand);
+  }
+  .lookup-row input:focus{border-color:var(--orange);background:var(--white);}
+  .lookup-row button{
+    background:var(--orange);color:var(--white);border:none;padding:0 1.4rem;border-radius:9px;
+    font-weight:700;font-size:0.92rem;
+  }
+  .lookup-row button:hover{background:var(--orange-2);}
+
+  #map{
+    width:100%;height:280px;border-radius:var(--radius);border:1px solid var(--line);
+    margin-bottom:1.6rem;background:var(--sand-2);
+  }
+
+  .status-card{
+    background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.8rem;margin-bottom:1.6rem;
+  }
+  .status-card .billet{font-family:'JetBrains Mono',monospace;color:var(--ink-soft);font-size:0.85rem;margin-bottom:0.3rem;}
+  .status-card .billet b{color:var(--night);}
+  .status-card h2{font-size:1.3rem;margin-bottom:1.4rem;}
+
+  .timeline{list-style:none;}
+  .timeline li{
+    display:flex;gap:0.9rem;padding-bottom:1.4rem;position:relative;
+  }
+  .timeline li:not(:last-child)::before{
+    content:'';position:absolute;left:9px;top:22px;bottom:-4px;width:2px;background:var(--line);
+  }
+  .timeline .dot{
+    width:20px;height:20px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--sand-2);border:2px solid var(--line);z-index:1;
+  }
+  .timeline li.done .dot{background:var(--green);border-color:var(--green);}
+  .timeline li.active .dot{background:var(--orange);border-color:var(--orange);box-shadow:0 0 0 4px rgba(242,101,10,0.18);}
+  .timeline li.cancelled .dot{background:var(--red);border-color:var(--red);}
+  .timeline .label{font-weight:600;color:var(--ink-soft);font-size:0.95rem;padding-top:1px;}
+  .timeline li.done .label, .timeline li.active .label{color:var(--night);}
+
+  .order-details{margin-top:1.2rem;padding-top:1.2rem;border-top:1px dashed var(--line);}
+  .detail-row{display:flex;justify-content:space-between;padding:0.5rem 0;font-size:0.9rem;}
+  .detail-row span:first-child{color:var(--ink-soft);}
+  .detail-row span:last-child{font-weight:600;color:var(--night);font-family:'JetBrains Mono',monospace;text-align:right;}
+
+  .empty-state{text-align:center;color:var(--ink-soft);padding:2rem 0;}
+  .back-link{display:inline-block;margin-top:1rem;color:var(--orange);font-weight:600;}
+
+  .wa-float{
+    position:fixed;bottom:1.6rem;right:1.6rem;z-index:1200;
+    background:var(--green);color:var(--white);width:58px;height:58px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+    box-shadow:0 12px 24px -8px rgba(63,166,107,0.6);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a href="index.html" class="logo"><span class="dot"></span>Goly<span>Express</span></a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="lookup-card">
+      <label for="billetInput">Numéro de billet</label>
+      <div class="lookup-row">
+        <input type="text" id="billetInput" placeholder="Ex : GLY-482913" class="mono">
+        <button id="lookupBtn">Suivre</button>
+      </div>
+    </div>
+
+    <div id="notConfigured" class="empty-state" style="display:none;">
+      Le suivi en direct n'est pas encore activé sur ce site.<br>
+      Voir <span class="mono">GUIDE-CONFIGURATION.md</span> pour connecter la base de données.
+    </div>
+
+    <div id="notFound" class="empty-state" style="display:none;">
+      Aucune commande trouvée avec ce numéro de billet.<br>Vérifiez le numéro et réessayez.
+      <br><a href="index.html#commander" class="back-link">← Passer une nouvelle commande</a>
+    </div>
+
+    <div id="result" style="display:none;">
+      <div id="map"></div>
+
+      <div class="status-card">
+        <div class="billet">Billet <b id="rBillet" class="mono">—</b></div>
+        <h2 id="rStatusLabel">—</h2>
+
+        <ul class="timeline" id="timeline">
+          <li data-statut="en_attente"><span class="dot"></span><span class="label">Commande reçue</span></li>
+          <li data-statut="coursier_affecte"><span class="dot"></span><span class="label">Coursier affecté</span></li>
+          <li data-statut="en_route"><span class="dot"></span><span class="label">En route vers vous</span></li>
+          <li data-statut="livre"><span class="dot"></span><span class="label">Livré</span></li>
+        </ul>
+
+        <div class="order-details">
+          <div class="detail-row"><span>Type</span><span id="rType">—</span></div>
+          <div class="detail-row"><span>Départ</span><span id="rDepart">—</span></div>
+          <div class="detail-row"><span>Arrivée</span><span id="rArrivee">—</span></div>
+          <div class="detail-row"><span>Téléphone</span><span id="rTel">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<a class="wa-float" href="https://wa.me/2250502829764" target="_blank" rel="noopener" aria-label="Contacter sur WhatsApp">💬</a>
+
+<script>
+  // ============================================================
+  // CONFIGURATION — mêmes valeurs que index.html
+  // ============================================================
+  const CONFIG = {
+    SUPABASE_URL: "zzzstnwbzqxujuskjrdk",
+    SUPABASE_ANON_KEY: ""
+  };
+
+  const supabase = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
+    ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
+    : null;
+
+  const STATUT_LABELS = {
+    en_attente: 'Commande reçue, recherche d\'un coursier…',
+    coursier_affecte: 'Un coursier a été affecté à votre course',
+    en_route: 'Votre coursier est en route',
+    livre: 'Livré avec succès 🎉',
+    annule: 'Commande annulée'
+  };
+  let map, courierMarker, destMarker;
+  let currentCommandeId = null;
+  let realtimeChannel = null;
+
+  function initMap() {
+    if (map) return;
+    map = L.map('map').setView([7.6906, -5.0301], 13); // Bouaké
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19
+    }).addTo(map);
+  }
+
+  function updateTimeline(statut) {
+    const items = document.querySelectorAll('#timeline li');
+    if (statut === 'annule') {
+      items.forEach(li => li.classList.remove('done', 'active'));
+      return;
+    }
+    const order = ['en_attente', 'coursier_affecte', 'en_route', 'livre'];
+    const idx = order.indexOf(statut);
+    items.forEach(li => {
+      const s = li.dataset.statut;
+      const sIdx = order.indexOf(s);
+      li.classList.remove('done', 'active');
+      if (sIdx < idx) li.classList.add('done');
+      else if (sIdx === idx) li.classList.add('active');
+    });
+  }
+
+  function renderCommande(cmd) {
+    document.getElementById('rBillet').textContent = cmd.numero_billet;
+    document.getElementById('rStatusLabel').textContent = STATUT_LABELS[cmd.statut] || cmd.statut;
+    document.getElementById('rType').textContent = cmd.type || '—';
+    document.getElementById('rDepart').textContent = cmd.depart || '—';
+    document.getElementById('rArrivee').textContent = cmd.arrivee || '—';
+    document.getElementById('rTel').textContent = cmd.telephone || '—';
+    updateTimeline(cmd.statut);
+  }
+
+  function updateCourierPosition(coursier) {
+    if (!coursier || !coursier.position_lat || !coursier.position_lng) return;
+    const pos = [coursier.position_lat, coursier.position_lng];
+    if (!courierMarker) {
+      const icon = L.divIcon({
+        className: '',
+        html: '<div style="background:#f2650a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
+        iconSize: [16, 16]
+      });
+      courierMarker = L.marker(pos, { icon }).addTo(map).bindPopup('Votre coursier');
+    } else {
+      courierMarker.setLatLng(pos);
+    }
+    map.panTo(pos);
+  }
+
+  async function lookupCommande(billet) {
+    document.getElementById('notFound').style.display = 'none';
+    document.getElementById('result').style.display = 'none';
+
+    if (!supabase) {
+      document.getElementById('notConfigured').style.display = 'block';
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('commandes')
+      .select('*')
+      .eq('numero_billet', billet.trim().toUpperCase())
+      .maybeSingle();
+
+    if (error || !data) {
+      document.getElementById('notFound').style.display = 'block';
+      return;
+    }
+
+    currentCommandeId = data.id;
+    document.getElementById('result').style.display = 'block';
+    initMap();
+    setTimeout(() => map.invalidateSize(), 50);
+    renderCommande(data);
+
+    if (data.coursier_id) {
+      const { data: coursier } = await supabase.from('coursiers').select('*').eq('id', data.coursier_id).maybeSingle();
+      updateCourierPosition(coursier);
+    }
+
+    subscribeRealtime(data.id, data.coursier_id);
+
+    // Mémorise le dernier billet consulté dans l'URL (partage facile)
+    const url = new URL(window.location);
+    url.searchParams.set('billet', data.numero_billet);
+    window.history.replaceState({}, '', url);
+  }
+
+  function subscribeRealtime(commandeId, coursierId) {
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    realtimeChannel = supabase.channel('suivi-' + commandeId)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commandes', filter: `id=eq.${commandeId}` },
+        (payload) => renderCommande(payload.new))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'coursiers', filter: coursierId ? `id=eq.${coursierId}` : undefined },
+        (payload) => updateCourierPosition(payload.new))
+      .subscribe();
+  }
+
+  document.getElementById('lookupBtn').addEventListener('click', () => {
+    const val = document.getElementById('billetInput').value;
+    if (val.trim()) lookupCommande(val);
+  });
+  document.getElementById('billetInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('lookupBtn').click();
+  });
+
+  // Pré-remplit depuis l'URL ?billet=GLY-xxxxx (lien envoyé après réservation)
+  const params = new URLSearchParams(window.location.search);
+  const billetFromUrl = params.get('billet');
+  if (billetFromUrl) {
+    document.getElementById('billetInput').value = billetFromUrl;
+    lookupCommande(billetFromUrl);
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.error('SW:', err));
+    });
+  }
+</script>
+
+</body>
+</html>

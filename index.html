@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goly Express — Coursiers moto à Bouaké  / Deménagement.</title>
+<meta name="description" content="Goly Express : livraison de plis, colis et repas chauds à Bouaké. Un coursier moto en quelques minutes, dans tout le Gbêkê.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12172b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Goly Express">
+
+<!-- Supabase (base de données + temps réel) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --night:#12172b;
+    --night-2:#1b2140;
+    --orange:#f2650a;
+    --orange-2:#ff7e29;
+    --gold:#f5b700;
+    --green:#3fa66b;
+    --sand:#f6f1e6;
+    --sand-2:#ece3d2;
+    --ink:#20222c;
+    --ink-soft:#5b5d6b;
+    --white:#fffdf9;
+    --line:#e2d9c6;
+    --radius:14px;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  body{
+    background:var(--sand);
+    color:var(--ink);
+    font-family:'Work Sans', sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk', sans-serif;
+    letter-spacing:-0.02em;
+  }
+
+  .mono{ font-family:'JetBrains Mono', monospace; }
+
+  a{color:inherit;}
+  img,svg{display:block;max-width:100%;}
+  button{font-family:inherit;cursor:pointer;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding-left:1.75rem;padding-right:1.75rem;}
+
+  :focus-visible{
+    outline:3px solid var(--gold);
+    outline-offset:3px;
+  }
+
+  /* ---------- NAV ---------- */
+  header{
+    position:sticky;top:0;z-index:1000;
+    background:rgba(255,253,249,0.9);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-container{
+    max-width:1180px;margin:0 auto;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 1.75rem;
+  }
+  .logo{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:800;font-size:1.4rem;
+    color:var(--night);
+    display:flex;align-items:center;gap:0.5rem;
+  }
+  .logo .dot{
+    width:10px;height:10px;border-radius:50%;background:var(--orange);
+    box-shadow:0 0 0 4px rgba(242,101,10,0.15);
+  }
+  .logo span{color:var(--orange);}
+
+  nav.links{display:flex;align-items:center;gap:2rem;}
+  nav.links a{
+    text-decoration:none;color:var(--ink-soft);font-weight:500;font-size:0.95rem;
+    position:relative;padding-bottom:4px;
+  }
+  nav.links a::after{
+    content:'';position:absolute;left:0;bottom:0;height:2px;width:0;
+    background:var(--orange);transition:width .25s ease;
+  }
+  nav.links a:hover::after, nav.links a.active::after{width:100%;}
+  nav.links a.active{color:var(--night);}
+
+  .nav-cta{
+    display:flex;align-items:center;gap:0.9rem;
+  }
+  .call-pill{
+    display:flex;align-items:center;gap:0.5rem;
+    background:var(--night);color:var(--white);
+    padding:0.55rem 1.1rem;border-radius:50px;
+    text-decoration:none;font-weight:600;font-size:0.85rem;
+    font-family:'JetBrains Mono',monospace;
+    transition:background .25s;
+  }
+  .call-pill:hover{background:var(--orange);}
+
+  .burger{
+    display:none;flex-direction:column;gap:4px;background:none;border:none;padding:6px;
+  }
+  .burger span{width:22px;height:2px;background:var(--night);border-radius:2px;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    background:radial-gradient(120% 100% at 20% 0%, var(--night-2) 0%, var(--night) 55%, #0a0d1a 100%);
+    color:var(--white);
+    padding:5rem 0 4.5rem;
+    overflow:hidden;
+    position:relative;
+  }
+  .hero-grid{
+    max-width:1180px;margin:0 auto;padding:0 1.75rem;
+    display:grid;grid-template-columns:1.1fr 0.9fr;gap:3rem;align-items:center;
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:0.5rem;
+    font-family:'JetBrains Mono',monospace;font-size:0.78rem;
+    letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--gold);
+    border:1px solid rgba(245,183,0,0.35);
+    padding:0.4rem 0.85rem;border-radius:50px;
+    margin-bottom:1.4rem;
+  }
+  .eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--gold);}
+
+  .hero h1{
+    font-size:3.4rem;font-weight:800;line-height:1.02;margin-bottom:1rem;
+  }
+  .hero h1 .accent{color:var(--orange-2);}
+
+  .slogan{
+    font-size:1.15rem;color:var(--gold);font-weight:600;margin-bottom:1.1rem;
+    font-style:italic;
+  }
+
+  .hero p.lead{
+    font-size:1.08rem;color:rgba(255,253,249,0.78);max-width:520px;margin-bottom:2.2rem;
+  }
+
+  .hero-actions{display:flex;flex-wrap:wrap;gap:1rem;}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:0.5rem;
+    background:var(--orange);color:var(--white);
+    padding:0.9rem 1.8rem;border-radius:50px;
+    text-decoration:none;font-weight:700;font-size:0.98rem;
+    border:none;
+    transition:transform .25s ease, background .25s ease, box-shadow .25s ease;
+    box-shadow:0 10px 25px -8px rgba(245, 100, 3, 0.6);
+  }
+  .btn:hover{transform:translateY(-3px);background:var(--orange-2);}
+  .btn.ghost{
+    background:transparent;color:var(--white);
+    box-shadow:none;border:1.5px solid rgba(255,253,249,0.3);
+  }
+  .btn.ghost:hover{border-color:var(--gold);background:rgba(245,183,0,0.08);}
+
+  /* route animation */
+  .route-card{
+    background:rgba(255,253,249,0.04);
+    border:1px solid rgba(255,253,249,0.12);
+    border-radius:20px;
+    padding:1.6rem 1.4rem 1.9rem;
+    backdrop-filter:blur(6px);
+  }
+  .route-card .route-label{
+    font-family:'JetBrains Mono',monospace;font-size:0.72rem;
+    color:rgba(255,253,249,0.5);text-transform:uppercase;letter-spacing:0.08em;
+    margin-bottom:1rem;display:flex;justify-content:space-between;
+  }
+  svg.route-svg{width:100%;height:auto;}
+  .route-pt{fill:var(--white);}
+  .route-line{
+    stroke:rgba(255,253,249,0.25);stroke-width:2;stroke-dasharray:6 8;fill:none;
+  }
+  .route-moto{
+    offset-path:path('M20,90 C 90,20 210,150 280,60');
+    animation:ride 3.6s linear infinite;
+  }
+  @keyframes ride{
+    0%{ offset-distance:0%; }
+    100%{ offset-distance:100%; }
+  }
+  .route-foot{
+    display:flex;justify-content:space-between;margin-top:1.1rem;
+    font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(255,253,249,0.55);
+  }
+  .route-foot b{color:var(--gold);font-weight:600;}
+
+  /* ---------- SECTION SHELL ---------- */
+  .section{padding:5.5rem 0;}
+  .section.tight{padding:4rem 0;}
+  .section-head{max-width:640px;margin-bottom:3rem;}
+  .section-eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:0.75rem;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--orange);font-weight:600;margin-bottom:0.7rem;
+  }
+  .section-head h2{font-size:2.1rem;color:var(--night);font-weight:700;}
+  .section-head p{color:var(--ink-soft);margin-top:0.8rem;font-size:1.02rem;max-width:560px;}
+
+  /* ---------- SERVICES ---------- */
+  .services-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.6rem;}
+  @media (max-width: 1100px){ .services-grid{grid-template-columns:repeat(2,1fr);} }
+  .service-card{
+    background:var(--white);border:1px solid var(--line);
+    border-radius:var(--radius);padding:2rem 1.8rem;
+    transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  }
+  .service-card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 20px 40px -20px rgba(18,23,43,0.25);
+    border-color:transparent;
+  }
+  .service-badge{
+    width:52px;height:52px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.5rem;margin-bottom:1.2rem;
+    background:var(--sand-2);
+  }
+  .service-card.a .service-badge{background:rgba(242,101,10,0.12);}
+  .service-card.b .service-badge{background:rgba(245,183,0,0.16);}
+  .service-card.c .service-badge{background:rgba(63,166,107,0.14);}
+  .service-card.d .service-badge{background:rgba(27,33,64,0.10);}
+  .service-card h3{font-size:1.15rem;color:var(--night);margin-bottom:0.6rem;}
+  .service-card p{color:var(--ink-soft);font-size:0.96rem;}
+  .service-tag{
+    display:inline-block;margin-top:1rem;font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;color:var(--ink-soft);background:var(--sand);
+    padding:0.3rem 0.6rem;border-radius:6px;
+  }
+
+  /* ---------- COMMENT CA MARCHE ---------- */
+  .steps{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:0;
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    background:var(--white);
+  }
+  .step{padding:2.2rem 2rem;position:relative;}
+  .step:not(:last-child){border-right:1px dashed var(--line);}
+  .step .num{
+    font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--orange);
+    font-weight:700;margin-bottom:0.9rem;
+  }
+  .step h3{font-size:1.05rem;color:var(--night);margin-bottom:0.5rem;}
+  .step p{color:var(--ink-soft);font-size:0.92rem;}
+
+  /* ---------- ZONES ---------- */
+  .zones-panel{
+    background:var(--night);color:var(--white);
+    border-radius:20px;padding:3rem;
+    display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center;
+  }
+  .zones-panel h3{font-size:1.5rem;margin-bottom:0.8rem;}
+  .zones-panel p{color:rgba(255,253,249,0.7);margin-bottom:1.2rem;font-size:0.98rem;}
+  .zone-chips{display:flex;flex-wrap:wrap;gap:0.6rem;}
+  .zone-chip{
+    font-family:'JetBrains Mono',monospace;font-size:0.78rem;
+    border:1px solid rgba(255,253,249,0.2);border-radius:8px;
+    padding:0.5rem 0.8rem;color:rgba(255,253,249,0.85);
+  }
+
+  /* ---------- BOOKING TICKET ---------- */
+  .ticket-wrap{max-width:760px;margin:0 auto;}
+  .ticket{
+    background:var(--white);
+    border-radius:18px;
+    box-shadow:0 30px 60px -30px rgba(18,23,43,0.35);
+    position:relative;
+    display:grid;grid-template-columns:1fr 220px;
+    overflow:hidden;
+  }
+  .ticket-main{padding:2.6rem 2.4rem;}
+  .ticket-stub{
+    background:var(--night);color:var(--white);
+    padding:2.6rem 1.6rem;
+    display:flex;flex-direction:column;justify-content:space-between;
+    position:relative;
+  }
+  .perf{
+    position:absolute;top:0;bottom:0;left:0;
+    width:0;border-left:2px dashed rgba(18,23,43,0.15);
+  }
+  .ticket-code{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(255,253,249,0.6);}
+  .ticket-code b{display:block;color:var(--gold);font-size:1.15rem;margin-top:0.3rem;letter-spacing:0.04em;}
+  .ticket-status{
+    font-family:'JetBrains Mono',monospace;font-size:0.72rem;
+    text-transform:uppercase;letter-spacing:0.08em;color:var(--green);
+    display:flex;align-items:center;gap:0.4rem;
+  }
+  .ticket-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);}
+
+  .form-group{margin-bottom:1.4rem;}
+  .form-group label{
+    display:block;margin-bottom:0.5rem;font-weight:600;color:var(--night);font-size:0.9rem;
+  }
+  .form-control{
+    width:100%;padding:0.75rem 1rem;border:1.5px solid var(--line);
+    border-radius:9px;outline:none;font-size:0.98rem;font-family:inherit;
+    background:var(--sand);transition:border-color .2s;
+  }
+  .form-control:focus{border-color:var(--orange);background:var(--white);}
+
+  .radio-group{display:flex;gap:0.6rem;flex-wrap:wrap;}
+  .radio-item{
+    display:flex;align-items:center;gap:0.5rem;
+    border:1.5px solid var(--line);border-radius:9px;padding:0.55rem 0.9rem;
+    cursor:pointer;font-size:0.9rem;transition:border-color .2s, background .2s;
+  }
+  .radio-item input{accent-color:var(--orange);}
+  .radio-item:has(input:checked){border-color:var(--orange);background:rgba(242,101,10,0.06);}
+
+  .route-mini{display:flex;align-items:center;gap:0.5rem;font-size:1.3rem;margin:1.6rem 0;color:var(--ink-soft);}
+  .route-mini .line{flex:1;height:0;border-top:2px dashed var(--line);}
+
+  .submit-btn{
+    width:100%;background:var(--green);color:var(--white);border:none;
+    padding:1rem;border-radius:9px;font-size:1rem;font-weight:700;
+    transition:background .25s;
+  }
+  .submit-btn:hover{background:#2f8b57;}
+
+  .ticket-confirm{display:none;}
+  .ticket-confirm.show{display:block;}
+  .ticket-form.hide{display:none;}
+  .confirm-icon{font-size:2.2rem;margin-bottom:0.8rem;}
+  .ticket-confirm h3{color:var(--night);font-size:1.3rem;margin-bottom:0.5rem;}
+  .ticket-confirm p{color:var(--ink-soft);font-size:0.95rem;margin-bottom:1.2rem;}
+  .confirm-row{
+    display:flex;justify-content:space-between;padding:0.6rem 0;
+    border-bottom:1px dashed var(--line);font-size:0.9rem;
+  }
+  .confirm-row span:first-child{color:var(--ink-soft);}
+  .confirm-row span:last-child{font-weight:600;color:var(--night);font-family:'JetBrains Mono',monospace;}
+  .new-order{
+    margin-top:1.3rem;background:none;border:1.5px solid var(--line);color:var(--night);
+    padding:0.7rem 1.2rem;border-radius:9px;font-weight:600;font-size:0.9rem;
+  }
+  .new-order:hover{border-color:var(--orange);color:var(--orange);}
+
+  .contact-callout{
+    text-align:center;margin-top:2rem;font-size:1.05rem;color:var(--ink-soft);
+  }
+  .contact-callout a{
+    color:var(--orange);text-decoration:none;font-weight:700;font-family:'JetBrains Mono',monospace;
+  }
+
+  /* ---------- TESTIMONIALS ---------- */
+  .testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;}
+  .testi{
+    background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.8rem;position:relative;
+  }
+  .testi .stars{color:var(--gold);letter-spacing:2px;margin-bottom:0.8rem;font-size:0.9rem;}
+  .testi p.quote{color:var(--ink);font-size:0.96rem;margin-bottom:1.1rem;}
+  .testi .who{font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--ink-soft);}
+  .testi .who b{color:var(--night);}
+
+  /* ---------- FAQ ---------- */
+  .faq{max-width:760px;margin:0 auto;}
+  .faq-item{border-bottom:1px solid var(--line);}
+  .faq-q{
+    width:100%;text-align:left;background:none;border:none;
+    padding:1.3rem 0;display:flex;justify-content:space-between;align-items:center;
+    font-weight:600;color:var(--night);font-size:1rem;
+  }
+  .faq-q .plus{
+    font-family:'JetBrains Mono',monospace;color:var(--orange);font-size:1.2rem;
+    transition:transform .25s;
+  }
+  .faq-item.open .plus{transform:rotate(45deg);}
+  .faq-a{
+    max-height:0;overflow:hidden;transition:max-height .3s ease;
+    color:var(--ink-soft);font-size:0.94rem;
+  }
+  .faq-a-inner{padding-bottom:1.3rem;}
+  .faq-item.open .faq-a{max-height:200px;}
+
+  /* ---------- FOOTER ---------- */
+  footer{background:var(--night);color:rgba(255,253,249,0.85);padding:3.5rem 0 2rem;margin-top:2rem;}
+  .footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:2.5rem;margin-bottom:2.5rem;}
+  .footer-logo{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.3rem;margin-bottom:0.9rem;}
+  .footer-logo span{color:var(--orange-2);}
+  footer p{color:rgba(255,253,249,0.55);font-size:0.92rem;}
+  footer h4{font-size:0.85rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin-bottom:1rem;}
+  footer ul{list-style:none;}
+  footer li{margin-bottom:0.6rem;font-size:0.92rem;color:rgba(255,253,249,0.75);}
+  footer a{text-decoration:none;}
+  footer a:hover{color:var(--orange-2);}
+  .footer-bottom{
+    border-top:1px solid rgba(255,253,249,0.1);padding-top:1.6rem;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;
+    font-size:0.82rem;color:rgba(255,253,249,0.45);
+  }
+
+  /* ---------- WHATSAPP FLOAT ---------- */
+  .wa-float{
+    position:fixed;bottom:1.6rem;right:1.6rem;z-index:1200;
+    background:var(--green);color:var(--white);
+    width:58px;height:58px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    text-decoration:none;font-size:1.6rem;
+    box-shadow:0 12px 24px -8px rgba(63,166,107,0.6);
+    transition:transform .25s;
+  }
+  .wa-float:hover{transform:scale(1.08);}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 960px){
+    .hero-grid{grid-template-columns:1fr;}
+    .route-card{order:-1;max-width:420px;}
+    .services-grid{grid-template-columns:1fr;}
+    .steps{grid-template-columns:1fr;}
+    .step:not(:last-child){border-right:none;border-bottom:1px dashed var(--line);}
+    .zones-panel{grid-template-columns:1fr;padding:2.2rem;}
+    .ticket{grid-template-columns:1fr;}
+    .ticket-stub{flex-direction:row;justify-content:space-between;align-items:center;}
+    .testi-grid{grid-template-columns:1fr;}
+    .footer-grid{grid-template-columns:1fr;}
+  }
+
+  @media (max-width: 720px){
+    nav.links{
+      position:fixed;top:64px;left:0;right:0;
+      background:var(--white);border-bottom:1px solid var(--line);
+      flex-direction:column;align-items:flex-start;gap:0;
+      padding:0.5rem 1.75rem 1rem;
+      transform:translateY(-130%);opacity:0;
+      transition:transform .3s ease, opacity .3s ease;
+    }
+    nav.links.open{transform:translateY(0);opacity:1;}
+    nav.links a{padding:0.7rem 0;width:100%;}
+    .burger{display:flex;}
+    .hero h1{font-size:2.3rem;}
+    .hero-actions{flex-direction:column;align-items:stretch;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav-container">
+    <div class="logo"><span class="dot"></span>Goly<span>Express</span></div>
+    <nav class="links" id="navLinks">
+      <a href="#accueil" class="active">Accueil</a>
+      <a href="#services">Nos courses</a>
+      <a href="#zones">Zones de services</a>
+      <a href="#commander">Passer commande</a>
+      <a href="suivi.html">Suivre ma commande</a>
+      <a href="#faq">Questions</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="call-pill" href="tel:0502829764">📞 05 02 82 97 64 / 07 49 36 55 45</a>
+      <button class="burger" id="burgerBtn" aria-label="Ouvrir le menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section id="accueil" class="hero">
+  <div class="hero-grid">
+    <div>
+      <span class="eyebrow">Coursiers moto · Bouaké, Gbêkê</span>
+      <h1>La ville, livrée <span class="accent">plus vite</span> qu'on ne l'imagine.</h1>
+      <p class="slogan">« L'efficacité au cœur du Gbêkê »</p>
+      <p class="lead">Plis professionnels, colis urgents ou plat encore chaud du maquis : un coursier Goly Express part vous chercher dès que vous validez la course.</p>
+      <div class="hero-actions">
+        <a href="#commander" class="btn">Commander une course</a>
+        <a href="tel:0502829764 / 0749365545" class="btn ghost">Appeler directement</a>
+      </div>
+    </div>
+
+    <div class="route-card">
+      <div class="route-label"><span>Trajet en cours</span><span class="mono">EN LIGNE</span></div>
+      <svg class="route-svg" viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg">
+        <path class="route-line" d="M20,90 C 90,20 210,150 280,60"></path>
+        <circle class="route-pt" cx="20" cy="90" r="5"></circle>
+        <circle class="route-pt" cx="280" cy="60" r="5"></circle>
+        <text x="14" y="112" fill="rgba(255,253,249,0.55)" font-size="10" font-family="JetBrains Mono, monospace">Commerce</text>
+        <text x="238" y="45" fill="rgba(255,253,249,0.55)" font-size="10" font-family="JetBrains Mono, monospace">Air France</text>
+        <circle class="route-moto" r="6" fill="#f2650a"></circle>
+      </svg>
+      <div class="route-foot">
+        <span>Type : <b>Colis</b></span>
+        <span>Statut : <b>En route</b></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="services" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-eyebrow">Nos courses</div>
+      <h2>Quatre façons de faire livrer ou transporter quelque chose à Bouaké</h2>
+      <p>Chaque type de course est traité par un coursier formé pour — un pli ne se transporte pas comme un plat chaud.</p>
+    </div>
+
+    <div class="services-grid">
+      <div class="service-card a">
+        <div class="service-badge">✉️</div>
+        <h3>Plis & documents</h3>
+        <p>Courriers, factures, dossiers administratifs : remis en main propre, sans détour, partout dans Bouaké.</p>
+        <span class="service-tag">Livraison directe</span>
+      </div>
+      <div class="service-card b">
+        <div class="service-badge">📦</div>
+        <h3>Colis & marchandises</h3>
+        <p>Pour les commerçants et particuliers du Gbêkê qui ont besoin qu'un colis arrive dans l'heure, pas dans la journée.</p>
+        <span class="service-tag">Idéal commerçants</span>
+      </div>
+      <div class="service-card c">
+        <div class="service-badge">🍲</div>
+        <h3>Repas & nourriture</h3>
+        <p>Alloco, garba, plats de maquis : récupérés chez le restaurateur et livrés chauds, avant que ça refroidisse.</p>
+        <span class="service-tag">Encore chaud à l'arrivée</span>
+      </div>
+      <div class="service-card d">
+        <div class="service-badge">🚚</div>
+        <h3>Déménagement</h3>
+        <p>Petits et moyens déménagements dans Bouaké : meubles, cartons et électroménager, chargés et transportés avec soin.</p>
+        <span class="service-tag">Devis par téléphone</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section tight" style="background:var(--white);border-top:1px solid var(--line);border-bottom:1px solid var(--line);">
+  <div class="wrap">
+    <div class="section-head" style="margin-bottom:2.5rem;">
+      <div class="section-eyebrow">Comment ça marche</div>
+      <h2>Trois étapes, un coursier</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">01</div>
+        <h3>Vous commandez</h3>
+        <p>Formulaire en ligne ou appel direct — vous indiquez le départ, l'arrivée et le type de course.</p>
+      </div>
+      <div class="step">
+        <div class="num">02</div>
+        <h3>Un coursier est affecté</h3>
+        <p>Il récupère le pli, le colis ou le plat directement à l'adresse ou au commerce indiqué.</p>
+      </div>
+      <div class="step">
+        <div class="num">03</div>
+        <h3>Livraison chez vous</h3>
+        <p>Remise en main propre à l'adresse d'arrivée, avec confirmation par téléphone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="zones" class="section">
+  <div class="wrap">
+    <div class="zones-panel">
+      <div>
+        <h3>Nous couvrons tout le Gbêkê</h3>
+        <p>Si votre quartier n'est pas listé, appelez-nous directement — la plupart des trajets dans Bouaké et ses environs sont possibles.</p>
+        <a href="tel:0502829764" class="btn" style="margin-top:0.5rem;">Vérifier mon quartier</a>
+      </div>
+      <div class="zone-chips">
+        <span class="zone-chip">Commerce</span>
+        <span class="zone-chip">Zone</span>
+        <span class="zone-chip">Nimbo</span>
+        <span class="zone-chip">Air France</span>
+        <span class="zone-chip">Kennedy</span>
+        <span class="zone-chip">Broukro</span>
+        <span class="zone-chip">Adje-yaokro</span>
+        <span class="zone-chip">Houphouetville</span>
+        <span class="zone-chip">Sokoura</span>
+        <span class="zone-chip">Dar-es-Salaam</span>
+        <span class="zone-chip">Sokoura</span>
+        <span class="zone-chip">Belleville</span>
+        <span class="zone-chip">Gonfreville</span>
+        <span class="zone-chip">Tollakouadiokro</span>
+        <span class="zone-chip">Ahougnanssou</span>
+        <span class="zone-chip">N'Gattakro</span>
+        <span class="zone-chip">Koko</span>
+        <span class="zone-chip">Etc.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="commander" class="section">
+  <div class="wrap">
+    <div class="section-head" style="margin-left:auto;margin-right:auto;text-align:center;">
+      <div class="section-eyebrow" style="text-align:center;">Passer commande</div>
+      <h2>Réservez votre billet de course</h2>
+      <p style="margin-left:auto;margin-right:auto;">Remplissez le trajet, un coursier vous appelle pour confirmer et partir immédiatement.</p>
+    </div>
+
+    <div class="ticket-wrap">
+      <div class="ticket">
+        <div class="ticket-main">
+
+          <form id="bookingForm" class="ticket-form">
+            <div class="form-group">
+              <label>Type de course</label>
+              <div class="radio-group">
+                <label class="radio-item"><input type="radio" name="type" value="Pli" required> ✉️ Pli</label>
+                <label class="radio-item"><input type="radio" name="type" value="Colis"> 📦 Colis</label>
+                <label class="radio-item"><input type="radio" name="type" value="Nourriture"> 🍲 Nourriture</label>
+                <label class="radio-item"><input type="radio" name="type" value="Déménagement"> 🚚 Déménagement</label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="depart">Quartier de départ (enlèvement)</label>
+              <input type="text" id="depart" class="form-control" placeholder="Ex : Commerce, Zone, Nimbo…" required>
+            </div>
+
+            <div class="route-mini"><span>📍</span><span class="line"></span><span>🏍️</span><span class="line"></span><span>🏁</span></div>
+
+            <div class="form-group">
+              <label for="arrivee">Quartier d'arrivée (livraison)</label>
+              <input type="text" id="arrivee" class="form-control" placeholder="Ex : Air France, Kennedy, Broukro…" required>
+            </div>
+
+            <div class="form-group">
+              <label for="tel">Votre numéro de téléphone</label>
+              <input type="tel" id="tel" class="form-control" placeholder="Ex : 05 02 82 97 64" required>
+            </div>
+
+            <button type="submit" class="submit-btn">Contacter un coursier Goly Express</button>
+          </form>
+
+          <div id="bookingConfirm" class="ticket-confirm">
+            <div class="confirm-icon">✅</div>
+            <h3>Demande reçue !</h3>
+            <p>Un coursier Goly Express va vous appeler dans quelques instants pour confirmer votre course.</p>
+            <div class="confirm-row"><span>Type</span><span id="cType">—</span></div>
+            <div class="confirm-row"><span>Départ</span><span id="cDepart">—</span></div>
+            <div class="confirm-row"><span>Arrivée</span><span id="cArrivee">—</span></div>
+            <div class="confirm-row"><span>Téléphone</span><span id="cTel">—</span></div>
+            <button type="button" class="new-order" id="newOrderBtn">Faire une nouvelle demande</button>
+          </div>
+
+        </div>
+
+        <div class="ticket-stub">
+          <div class="perf"></div>
+          <div>
+            <div class="ticket-code">N° de billet<b id="ticketNum" class="mono">GLY-000000</b></div>
+          </div>
+          <div>
+            <div class="ticket-status" style="margin-bottom:0.6rem;">Prêt à partir</div>
+            <div class="mono" style="font-size:0.75rem;color:rgba(255,253,249,0.55);" id="ticketDate">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="contact-callout">
+        Ou appelez directement le <a href="tel:0502829764">05 02 82 97 64</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section tight" style="background:var(--white);border-top:1px solid var(--line);">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-eyebrow">Ils nous font confiance</div>
+      <h2>Des habitués du Gbêkê</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi">
+        <div class="stars">★★★★★</div>
+        <p class="quote">« J'envoie mes factures clients par Goly Express toutes les semaines. Jamais un pli perdu, jamais en retard. »</p>
+        <div class="who"><b>Benny Destin.</b> — Commerçant, Commerce</div>
+      </div>
+      <div class="testi">
+        <div class="stars">★★★★★</div>
+        <p class="quote">« Le coursier est arrivé au maquis avant même que j'aie fini de payer. Le garba était encore fumant à la livraison. »</p>
+        <div class="who"><b>Danielle Konan.</b> — Client, Kennedy</div>
+      </div>
+      <div class="testi">
+        <div class="stars">★★★★★☆</div>
+        <p class="quote">« Pratique pour envoyer des pièces détachées entre nos deux boutiques sans devoir fermer pour aller livrer moi-même. »</p>
+        <div class="who"><b>Djiké Valeriane.</b> — Commerçant, Broukro</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="section">
+  <div class="wrap">
+    <div class="section-head" style="margin-left:auto;margin-right:auto;text-align:center;">
+      <div class="section-eyebrow" style="text-align:center;">Questions fréquentes</div>
+      <h2>Avant de commander</h2>
+    </div>
+    <div class="faq">
+      <div class="faq-item open">
+        <button class="faq-q">Quels quartiers de Bouaké couvrez-vous ? <span class="plus">+</span></button>
+        <div class="faq-a"><div class="faq-a-inner">La majorité des quartiers du Gbêkê : Commerce, Zone, Nimbo, Air France, Kennedy, Broukro et bien d'autres. En cas de doute, un simple appel confirme si votre trajet est possible.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Combien de temps prend une livraison ? <span class="plus">+</span></button>
+        <div class="faq-a"><div class="faq-a-inner">Le délai dépend de la distance et de la circulation. Un coursier est affecté dès votre demande et vous appelle pour confirmer un horaire précis.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Comment se passe le paiement ? <span class="plus">+</span></button>
+        <div class="faq-a"><div class="faq-a-inner">Le tarif de la course vous est confirmé par téléphone avant le départ du coursier, selon le trajet et le type de livraison.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Puis-je commander pour quelqu'un d'autre ? <span class="plus">+</span></button>
+        <div class="faq-a"><div class="faq-a-inner">Oui, indiquez simplement le quartier de livraison et un numéro de contact joignable sur place au moment de la commande.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">Goly<span>Express</span></div>
+        <p>Coursiers moto pour plis, colis et repas, partout dans Bouaké et dans le Gbêkê.</p>
+      </div>
+      <div>
+        <h4>Navigation</h4>
+        <ul>
+          <li><a href="#services">Nos courses</a></li>
+          <li><a href="#zones">Zones de services</a></li>
+          <li><a href="#commander">Passer commande</a></li>
+          <li><a href="#faq">Questions</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:0502829764">05 02 82 97 64</a></li>
+          <li><a href="https://wa.me/2250502829764" target="_blank" rel="noopener">WhatsApp</a></li>
+          <li>Bouaké, Côte d'Ivoire</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 Goly Express — L'efficacité au cœur du Gbêkê.</span>
+      <span>&copy; Mindlytic Group 07 49 36 55 45</span>
+      <span>Tous droits réservés.</span>
+    </div>
+  </div>
+</footer>
+
+<a class="wa-float" href="https://wa.me/2250502829764" target="_blank" rel="noopener" aria-label="Contacter sur WhatsApp">💬</a>
+
+<script>
+  // Mobile menu
+  const burgerBtn = document.getElementById('burgerBtn');
+  const navLinks = document.getElementById('navLinks');
+  burgerBtn.addEventListener('click', () => {
+    const open = navLinks.classList.toggle('open');
+    burgerBtn.setAttribute('aria-expanded', open);
+  });
+  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    navLinks.classList.remove('open');
+    burgerBtn.setAttribute('aria-expanded', 'false');
+  }));
+
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navA = document.querySelectorAll('nav.links a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 120) current = s.getAttribute('id');
+    });
+    navA.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
+  }, { passive: true });
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => {
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+
+  // Ticket number + date
+  function refreshTicket() {
+    const num = Math.floor(100000 + Math.random() * 899999);
+    document.getElementById('ticketNum').textContent = 'GLY-' + num;
+    document.getElementById('ticketDate').textContent =
+      new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+  refreshTicket();
+
+  // ============================================================
+  // CONFIGURATION — à remplir une seule fois.
+  // Voir "GUIDE-CONFIGURATION.md" fourni à côté de ce site.
+  // ============================================================
+  const CONFIG = {
+    // Récupérés dans Supabase > Project Settings > API
+    SUPABASE_URL: "",       // ex: "zzzstnwbzqxujuskjrdk"
+    SUPABASE_ANON_KEY: "",  // clé publique "anon"
+    // Numéro WhatsApp de l'administrateur, format international sans "+".
+    WHATSAPP_ADMIN_NUMBER: "2250502829764"
+  };
+
+  const supabase = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
+    ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
+    : null;
+
+  // Booking form
+  const form = document.getElementById('bookingForm');
+  const confirmPanel = document.getElementById('bookingConfirm');
+  const submitBtn = form.querySelector('.submit-btn');
+
+  function openWhatsAppOrder(order) {
+    const text = `Nouvelle commande Goly Express%0A`
+      + `Billet: ${order.ticket}%0A`
+      + `Type: ${order.type}%0A`
+      + `Départ: ${order.depart}%0A`
+      + `Arrivée: ${order.arrivee}%0A`
+      + `Téléphone client: ${order.tel}`;
+    window.open(`https://wa.me/${CONFIG.WHATSAPP_ADMIN_NUMBER}?text=${text}`, '_blank');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const typeInput = form.querySelector('input[name="type"]:checked');
+    const order = {
+      ticket: document.getElementById('ticketNum').textContent,
+      type: typeInput ? typeInput.value : '',
+      depart: document.getElementById('depart').value,
+      arrivee: document.getElementById('arrivee').value,
+      tel: document.getElementById('tel').value,
+      date: new Date().toISOString()
+    };
+
+    // Enregistrement de la commande dans la base de données (si configurée)
+    if (supabase) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Envoi en cours…';
+      const { error } = await supabase.from('commandes').insert({
+        numero_billet: order.ticket,
+        type: order.type,
+        depart: order.depart,
+        arrivee: order.arrivee,
+        telephone: order.tel
+      });
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Réserver ma course';
+      if (error) {
+        console.error('Supabase: enregistrement impossible', error);
+        alert("Un souci technique empêche l'enregistrement de la commande. Merci de réessayer ou de nous appeler directement.");
+        return;
+      }
+    }
+
+    // Alerte WhatsApp à l'administrateur (utile tant que le tableau de bord admin n'existe pas encore)
+    openWhatsAppOrder(order);
+
+    document.getElementById('cType').textContent = order.type || '—';
+    document.getElementById('cDepart').textContent = order.depart || '—';
+    document.getElementById('cArrivee').textContent = order.arrivee || '—';
+    document.getElementById('cTel').textContent = order.tel || '—';
+    form.classList.add('hide');
+    confirmPanel.classList.add('show');
+
+    if (supabase) {
+      const link = document.createElement('a');
+      link.href = `suivi.html?billet=${encodeURIComponent(order.ticket)}`;
+      link.className = 'btn';
+      link.style.marginTop = '1rem';
+      link.style.display = 'inline-flex';
+      link.textContent = '📍 Suivre ma commande en direct';
+      confirmPanel.appendChild(link);
+    }
+  });
+
+  document.getElementById('newOrderBtn').addEventListener('click', () => {
+    form.reset();
+    form.classList.remove('hide');
+    confirmPanel.classList.remove('show');
+    refreshTicket();
+  });
+
+  // PWA : enregistrement du service worker (installabilité + fonctionnement hors-ligne basique)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.error('SW:', err));
+    });
+  }
+</script>
+
+</body>
+</html>
