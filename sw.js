@@ -6,6 +6,7 @@ const CACHE_NAME = 'goly-express-v1';
 const PRECACHE_URLS = [
   'index.html',
   'suivi.html',
+  'livreur.html',
   'manifest.json',
   'icon-192.png',
   'icon-512.png'

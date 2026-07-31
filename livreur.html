@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Espace Coursier — Goly Express</title>
+<meta name="description" content="Espace coursier Goly Express : courses disponibles, suivi et livraison.">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12172b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --night:#12172b; --night-2:#1b2140;
+    --orange:#f2650a; --orange-2:#ff7e29; --gold:#f5b700; --green:#3fa66b;
+    --red:#d0453a;
+    --sand:#f6f1e6; --sand-2:#ece3d2;
+    --ink:#20222c; --ink-soft:#5b5d6b;
+    --white:#fffdf9; --line:#e2d9c6; --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--sand);color:var(--ink);font-family:'Work Sans',sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.02em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;border:none;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 1.4rem;}
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 100% at 20% 0%, var(--night-2) 0%, var(--night) 55%, #0a0d1a 100%);
+    padding:1.5rem;
+  }
+  .login-card{
+    background:var(--white);border-radius:20px;padding:2.4rem 2rem;width:100%;max-width:380px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.4);
+  }
+  .login-logo{
+    font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;
+    display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;
+  }
+  .login-logo .dot{width:10px;height:10px;border-radius:50%;background:var(--orange);}
+  .login-logo span{color:var(--orange);}
+  .login-sub{color:var(--ink-soft);font-size:0.9rem;margin-bottom:1.8rem;}
+  .form-group{margin-bottom:1.2rem;}
+  .form-group label{display:block;font-weight:600;font-size:0.88rem;margin-bottom:0.5rem;}
+  .form-control{
+    width:100%;padding:0.8rem 1rem;border:1.5px solid var(--line);border-radius:9px;
+    font-size:1rem;font-family:inherit;background:var(--sand);outline:none;
+  }
+  .form-control:focus{border-color:var(--orange);background:var(--white);}
+  .login-btn{
+    width:100%;background:var(--orange);color:var(--white);padding:0.9rem;border-radius:9px;
+    font-weight:700;font-size:1rem;margin-top:0.4rem;
+  }
+  .login-btn:hover{background:var(--orange-2);}
+  .login-error{color:var(--red);font-size:0.85rem;margin-top:0.9rem;display:none;}
+
+  /* ---------- DASHBOARD ---------- */
+  #dashScreen{display:none;}
+  header.dash{
+    background:var(--night);color:var(--white);padding:1rem 0;position:sticky;top:0;z-index:10;
+  }
+  .dash-top{display:flex;align-items:center;justify-content:space-between;}
+  .dash-name{font-weight:700;font-size:1.02rem;}
+  .dash-name small{display:block;font-weight:400;color:rgba(255,253,249,0.55);font-size:0.75rem;margin-top:2px;}
+  .logout-btn{background:none;color:rgba(255,253,249,0.7);font-size:0.82rem;text-decoration:underline;}
+
+  .status-toggle{
+    display:flex;align-items:center;gap:0.6rem;margin-top:0.9rem;
+    background:rgba(255,253,249,0.08);border-radius:50px;padding:0.5rem 0.9rem;
+  }
+  .status-toggle .light{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);}
+  .status-toggle.on .light{background:var(--green);box-shadow:0 0 0 4px rgba(63,166,107,0.25);}
+  .status-toggle span.label{font-size:0.85rem;flex:1;font-family:'JetBrains Mono',monospace;}
+  .switch{
+    width:42px;height:24px;border-radius:50px;background:rgba(255,253,249,0.2);position:relative;transition:background .2s;
+  }
+  .switch.on{background:var(--green);}
+  .switch::after{
+    content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+    background:var(--white);transition:transform .2s;
+  }
+  .switch.on::after{transform:translateX(18px);}
+
+  main.dash{padding:1.6rem 0 3rem;}
+  .tabs{display:flex;gap:0.5rem;margin-bottom:1.4rem;}
+  .tab{
+    flex:1;text-align:center;padding:0.65rem;border-radius:9px;font-weight:600;font-size:0.88rem;
+    background:var(--white);border:1.5px solid var(--line);color:var(--ink-soft);
+  }
+  .tab.active{background:var(--night);color:var(--white);border-color:var(--night);}
+
+  .order-card{
+    background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.3rem;margin-bottom:1rem;
+  }
+  .order-card .billet{font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--ink-soft);margin-bottom:0.5rem;}
+  .order-card .type-badge{
+    display:inline-block;background:rgba(242,101,10,0.1);color:var(--orange);
+    font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
+    padding:0.2rem 0.6rem;border-radius:6px;margin-bottom:0.7rem;
+  }
+  .order-route{display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.9rem;}
+  .order-route .pt{display:flex;gap:0.6rem;font-size:0.92rem;align-items:flex-start;}
+  .order-route .pt .marker{color:var(--orange);flex-shrink:0;}
+  .order-tel{font-size:0.85rem;color:var(--ink-soft);margin-bottom:1rem;}
+  .order-tel a{color:var(--night);font-weight:600;}
+  .order-actions{display:flex;gap:0.6rem;}
+  .order-actions button{
+    flex:1;padding:0.7rem;border-radius:9px;font-weight:700;font-size:0.88rem;
+  }
+  .btn-primary{background:var(--orange);color:var(--white);}
+  .btn-primary:hover{background:var(--orange-2);}
+  .btn-success{background:var(--green);color:var(--white);}
+  .btn-success:hover{background:#2f8b57;}
+  .btn-outline{background:none;border:1.5px solid var(--line) !important;color:var(--ink-soft);}
+
+  .empty{text-align:center;color:var(--ink-soft);padding:3rem 1rem;font-size:0.92rem;}
+
+  .gps-banner{
+    background:var(--green);color:var(--white);font-size:0.82rem;
+    padding:0.6rem 1rem;border-radius:9px;margin-bottom:1.2rem;
+    display:flex;align-items:center;gap:0.5rem;
+  }
+  .gps-banner.error{background:var(--red);}
+</style>
+</head>
+<body>
+
+<!-- ============ ÉCRAN DE CONNEXION ============ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo"><span class="dot"></span>Goly<span>Express</span></div>
+    <div class="login-sub">Espace coursier</div>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="loginTel">Numéro de téléphone</label>
+        <input type="tel" id="loginTel" class="form-control" placeholder="07 49 36 55 45" required>
+      </div>
+      <div class="form-group">
+        <label for="loginPin">Code PIN (4 chiffres)</label>
+        <input type="password" id="loginPin" class="form-control mono" placeholder="••••" maxlength="4" inputmode="numeric" required>
+      </div>
+      <button type="submit" class="login-btn" id="loginBtn">Se connecter</button>
+      <div class="login-error" id="loginError">Numéro ou code PIN incorrect.</div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ TABLEAU DE BORD ============ -->
+<div id="dashScreen">
+  <header class="dash">
+    <div class="wrap">
+      <div class="dash-top">
+        <div class="dash-name" id="courierName">—<small id="courierVehicule">—</small></div>
+        <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+      </div>
+      <div class="status-toggle" id="statusToggle">
+        <span class="light"></span>
+        <span class="label" id="statusLabel">HORS LIGNE</span>
+        <div class="switch" id="statusSwitch"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <div class="wrap">
+      <div id="gpsBanner" class="gps-banner" style="display:none;"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="mine">Mes courses</button>
+        <button class="tab" data-tab="available">Disponibles</button>
+      </div>
+
+      <div id="mineList"></div>
+      <div id="availableList" style="display:none;"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ============================================================
+  // CONFIGURATION — mêmes valeurs que index.html / suivi.html
+  // ============================================================
+  const CONFIG = {
+    SUPABASE_URL: "",
+    SUPABASE_ANON_KEY: ""
+  };
+
+  const supabase = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
+    ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
+    : null;
+
+  let currentCoursier = null;
+  let watchId = null;
+  let realtimeChannel = null;
+  let activeTab = 'mine';
+
+  const STATUT_LABELS = {
+    en_attente: 'En attente',
+    coursier_affecte: 'Affectée',
+    en_route: 'En route',
+    livre: 'Livrée'
+  };
+
+  // ---------- Normalisation numéro de téléphone (simple) ----------
+  function normTel(t) {
+    return t.replace(/\s+/g, '').replace(/^\+225/, '').replace(/^225/, '');
+  }
+
+  // ---------- Connexion ----------
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+
+    if (!supabase) {
+      errEl.textContent = "Le site n'est pas encore connecté à la base de données. Voir GUIDE-CONFIGURATION.md.";
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const tel = normTel(document.getElementById('loginTel').value);
+    const pin = document.getElementById('loginPin').value.trim();
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = 'Connexion…';
+
+    const { data, error } = await supabase.from('coursiers').select('*')
+      .eq('telephone', tel).eq('pin_code', pin).eq('actif', true).maybeSingle();
+
+    btn.disabled = false; btn.textContent = 'Se connecter';
+
+    if (error || !data) {
+      errEl.textContent = 'Numéro ou code PIN incorrect.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    currentCoursier = data;
+    localStorage.setItem('goly_coursier_id', data.id);
+    enterDashboard();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    stopGpsSharing();
+    localStorage.removeItem('goly_coursier_id');
+    currentCoursier = null;
+    document.getElementById('dashScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  });
+
+  // ---------- Reprise de session ----------
+  async function tryResumeSession() {
+    const savedId = localStorage.getItem('goly_coursier_id');
+    if (!savedId || !supabase) return;
+    const { data } = await supabase.from('coursiers').select('*').eq('id', savedId).maybeSingle();
+    if (data) { currentCoursier = data; enterDashboard(); }
+  }
+
+  // ---------- Tableau de bord ----------
+  function enterDashboard() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashScreen').style.display = 'block';
+    document.getElementById('courierName').firstChild.textContent = currentCoursier.nom;
+    document.getElementById('courierVehicule').textContent = currentCoursier.vehicule || 'moto';
+    setOnlineToggle(currentCoursier.statut !== 'hors_ligne');
+    loadOrders();
+    subscribeRealtime();
+  }
+
+  // ---------- Statut en ligne / hors ligne ----------
+  function setOnlineToggle(isOn) {
+    const toggle = document.getElementById('statusToggle');
+    const sw = document.getElementById('statusSwitch');
+    const label = document.getElementById('statusLabel');
+    toggle.classList.toggle('on', isOn);
+    sw.classList.toggle('on', isOn);
+    label.textContent = isOn ? 'EN LIGNE — disponible' : 'HORS LIGNE';
+  }
+
+  document.getElementById('statusToggle').addEventListener('click', async () => {
+    const nowOn = !document.getElementById('statusToggle').classList.contains('on');
+    setOnlineToggle(nowOn);
+    const newStatut = nowOn ? 'disponible' : 'hors_ligne';
+    if (supabase) await supabase.from('coursiers').update({ statut: newStatut }).eq('id', currentCoursier.id);
+    if (nowOn) startGpsSharing(); else stopGpsSharing();
+  });
+
+  // ---------- Partage GPS ----------
+  function startGpsSharing() {
+    if (!('geolocation' in navigator)) {
+      showGpsBanner('La géolocalisation n\'est pas disponible sur cet appareil.', true);
+      return;
+    }
+    if (watchId) return;
+    watchId = navigator.geolocation.watchPosition(async (pos) => {
+      showGpsBanner('📍 Position partagée en direct avec les clients', false);
+      if (supabase) {
+        await supabase.from('coursiers').update({
+          position_lat: pos.coords.latitude,
+          position_lng: pos.coords.longitude,
+          position_maj_at: new Date().toISOString()
+        }).eq('id', currentCoursier.id);
+      }
+    }, (err) => {
+      showGpsBanner('Position GPS non autorisée — active la localisation pour que les clients te voient.', true);
+    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+  }
+
+  function stopGpsSharing() {
+    if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    document.getElementById('gpsBanner').style.display = 'none';
+  }
+
+  function showGpsBanner(text, isError) {
+    const el = document.getElementById('gpsBanner');
+    el.textContent = text;
+    el.className = 'gps-banner' + (isError ? ' error' : '');
+    el.style.display = 'flex';
+  }
+
+  // ---------- Onglets ----------
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeTab = tab.dataset.tab;
+      document.getElementById('mineList').style.display = activeTab === 'mine' ? 'block' : 'none';
+      document.getElementById('availableList').style.display = activeTab === 'available' ? 'block' : 'none';
+    });
+  });
+
+  // ---------- Chargement des commandes ----------
+  async function loadOrders() {
+    if (!supabase) return;
+
+    const { data: mine } = await supabase.from('commandes').select('*')
+      .eq('coursier_id', currentCoursier.id)
+      .in('statut', ['coursier_affecte', 'en_route'])
+      .order('created_at', { ascending: true });
+    renderOrders(mine || [], 'mineList', true);
+
+    const { data: available } = await supabase.from('commandes').select('*')
+      .eq('statut', 'en_attente')
+      .is('coursier_id', null)
+      .order('created_at', { ascending: true });
+    renderOrders(available || [], 'availableList', false);
+  }
+
+  function renderOrders(orders, containerId, isMine) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (orders.length === 0) {
+      container.innerHTML = `<div class="empty">${isMine ? "Aucune course en cours pour l'instant." : "Aucune course disponible pour le moment."}</div>`;
+      return;
+    }
+    orders.forEach(order => container.appendChild(buildOrderCard(order, isMine)));
+  }
+
+  function buildOrderCard(order, isMine) {
+    const card = document.createElement('div');
+    card.className = 'order-card';
+
+    let actionsHtml = '';
+    if (!isMine) {
+      actionsHtml = `<div class="order-actions"><button class="btn-primary" data-action="prendre" data-id="${order.id}">Prendre cette course</button></div>`;
+    } else if (order.statut === 'coursier_affecte') {
+      actionsHtml = `<div class="order-actions">
+        <button class="btn-success" data-action="en_route" data-id="${order.id}">Démarrer la course</button>
+      </div>`;
+    } else if (order.statut === 'en_route') {
+      actionsHtml = `<div class="order-actions">
+        <a class="order-actions" style="flex:0;" href="tel:${order.telephone}"></a>
+        <button class="btn-success" data-action="livre" data-id="${order.id}">Marquer comme livré</button>
+      </div>`;
+    }
+
+    card.innerHTML = `
+      <div class="billet">Billet <b>${order.numero_billet}</b> · ${STATUT_LABELS[order.statut] || order.statut}</div>
+      <div class="type-badge">${order.type || 'course'}</div>
+      <div class="order-route">
+        <div class="pt"><span class="marker">●</span><span>${order.depart}</span></div>
+        <div class="pt"><span class="marker">◆</span><span>${order.arrivee}</span></div>
+      </div>
+      <div class="order-tel">Client : <a href="tel:${order.telephone}">${order.telephone}</a></div>
+      ${actionsHtml}
+    `;
+
+    card.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => handleOrderAction(btn.dataset.action, btn.dataset.id));
+    });
+
+    return card;
+  }
+
+  async function handleOrderAction(action, orderId) {
+    if (!supabase) return;
+    let update = {};
+    if (action === 'prendre') update = { coursier_id: currentCoursier.id, statut: 'coursier_affecte' };
+    if (action === 'en_route') { update = { statut: 'en_route' }; startGpsSharing(); }
+    if (action === 'livre') update = { statut: 'livre' };
+
+    const { error } = await supabase.from('commandes').update(update).eq('id', orderId);
+    if (error) { alert("Impossible de mettre à jour la course, réessaie."); return; }
+    loadOrders();
+  }
+
+  // ---------- Temps réel : rafraîchit les listes si une commande change ----------
+  function subscribeRealtime() {
+    if (!supabase) return;
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    realtimeChannel = supabase.channel('livreur-' + currentCoursier.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'commandes' }, () => loadOrders())
+      .subscribe();
+  }
+
+  tryResumeSession();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.error('SW:', err));
+    });
+  }
+</script>
+
+</body>
+</html>
