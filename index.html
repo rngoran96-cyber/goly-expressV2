@@ -872,7 +872,7 @@
       submitBtn.textContent = 'Réserver ma course';
       if (error) {
         console.error('Supabase: enregistrement impossible', error);
-        alert("Un souci technique empêche l'enregistrement de la commande. Merci de réessayer ou de nous appeler directement.");
+        alert("Erreur technique — détail pour diagnostic :\n\n" + (error.message || JSON.stringify(error)) + "\n\n(Code : " + (error.code || 'inconnu') + ")");
         return;
       }
     }
