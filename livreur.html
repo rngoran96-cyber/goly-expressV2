@@ -196,7 +196,7 @@
     SUPABASE_ANON_KEY: "sb_publishable_Xp5XULUX_I4Q_rCqKKHN4A_txr_eMGG"
   };
 
-  const supabase = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
+  const sb = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
     ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
     : null;
 
@@ -223,7 +223,7 @@
     const errEl = document.getElementById('loginError');
     errEl.style.display = 'none';
 
-    if (!supabase) {
+    if (!sb) {
       errEl.textContent = "Le site n'est pas encore connecté à la base de données. Voir GUIDE-CONFIGURATION.md.";
       errEl.style.display = 'block';
       return;
@@ -234,7 +234,7 @@
     const btn = document.getElementById('loginBtn');
     btn.disabled = true; btn.textContent = 'Connexion…';
 
-    const { data, error } = await supabase.from('coursiers').select('*')
+    const { data, error } = await sb.from('coursiers').select('*')
       .eq('telephone', tel).eq('pin_code', pin).eq('actif', true).maybeSingle();
 
     btn.disabled = false; btn.textContent = 'Se connecter';
@@ -261,8 +261,8 @@
   // ---------- Reprise de session ----------
   async function tryResumeSession() {
     const savedId = localStorage.getItem('goly_coursier_id');
-    if (!savedId || !supabase) return;
-    const { data } = await supabase.from('coursiers').select('*').eq('id', savedId).maybeSingle();
+    if (!savedId || !sb) return;
+    const { data } = await sb.from('coursiers').select('*').eq('id', savedId).maybeSingle();
     if (data) { currentCoursier = data; enterDashboard(); }
   }
 
@@ -291,7 +291,7 @@
     const nowOn = !document.getElementById('statusToggle').classList.contains('on');
     setOnlineToggle(nowOn);
     const newStatut = nowOn ? 'disponible' : 'hors_ligne';
-    if (supabase) await supabase.from('coursiers').update({ statut: newStatut }).eq('id', currentCoursier.id);
+    if (sb) await sb.from('coursiers').update({ statut: newStatut }).eq('id', currentCoursier.id);
     if (nowOn) startGpsSharing(); else stopGpsSharing();
   });
 
@@ -304,8 +304,8 @@
     if (watchId) return;
     watchId = navigator.geolocation.watchPosition(async (pos) => {
       showGpsBanner('📍 Position partagée en direct avec les clients', false);
-      if (supabase) {
-        await supabase.from('coursiers').update({
+      if (sb) {
+        await sb.from('coursiers').update({
           position_lat: pos.coords.latitude,
           position_lng: pos.coords.longitude,
           position_maj_at: new Date().toISOString()
@@ -341,15 +341,15 @@
 
   // ---------- Chargement des commandes ----------
   async function loadOrders() {
-    if (!supabase) return;
+    if (!sb) return;
 
-    const { data: mine } = await supabase.from('commandes').select('*')
+    const { data: mine } = await sb.from('commandes').select('*')
       .eq('coursier_id', currentCoursier.id)
       .in('statut', ['coursier_affecte', 'en_route'])
       .order('created_at', { ascending: true });
     renderOrders(mine || [], 'mineList', true);
 
-    const { data: available } = await supabase.from('commandes').select('*')
+    const { data: available } = await sb.from('commandes').select('*')
       .eq('statut', 'en_attente')
       .is('coursier_id', null)
       .order('created_at', { ascending: true });
@@ -403,22 +403,22 @@
   }
 
   async function handleOrderAction(action, orderId) {
-    if (!supabase) return;
+    if (!sb) return;
     let update = {};
     if (action === 'prendre') update = { coursier_id: currentCoursier.id, statut: 'coursier_affecte' };
     if (action === 'en_route') { update = { statut: 'en_route' }; startGpsSharing(); }
     if (action === 'livre') update = { statut: 'livre' };
 
-    const { error } = await supabase.from('commandes').update(update).eq('id', orderId);
+    const { error } = await sb.from('commandes').update(update).eq('id', orderId);
     if (error) { alert("Impossible de mettre à jour la course, réessaie."); return; }
     loadOrders();
   }
 
   // ---------- Temps réel : rafraîchit les listes si une commande change ----------
   function subscribeRealtime() {
-    if (!supabase) return;
-    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
-    realtimeChannel = supabase.channel('livreur-' + currentCoursier.id)
+    if (!sb) return;
+    if (realtimeChannel) sb.removeChannel(realtimeChannel);
+    realtimeChannel = sb.channel('livreur-' + currentCoursier.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'commandes' }, () => loadOrders())
       .subscribe();
   }

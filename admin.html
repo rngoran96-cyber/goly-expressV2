@@ -223,7 +223,7 @@
     ADMIN_PASSWORD: "golyexpress2026"
   };
 
-  const supabase = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
+  const sb = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
     ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
     : null;
 
@@ -259,7 +259,7 @@
   if (sessionStorage.getItem('goly_admin_ok') === '1') enterDashboard();
 
   function enterDashboard() {
-    if (!supabase) {
+    if (!sb) {
       alert("Le site n'est pas encore connecté à la base de données. Voir GUIDE-CONFIGURATION.md.");
     }
     document.getElementById('loginScreen').style.display = 'none';
@@ -280,15 +280,15 @@
 
   // ---------- Chargement général ----------
   async function loadAll() {
-    if (!supabase) return;
-    const { data: coursiers } = await supabase.from('coursiers').select('*').order('created_at', { ascending: true });
+    if (!sb) return;
+    const { data: coursiers } = await sb.from('coursiers').select('*').order('created_at', { ascending: true });
     allCoursiers = coursiers || [];
     await Promise.all([loadStats(), loadOrders(), renderCoursiers(), loadZones()]);
   }
 
   // ---------- Aperçu / stats ----------
   async function loadStats() {
-    const { data: orders } = await supabase.from('commandes').select('statut, prix, created_at');
+    const { data: orders } = await sb.from('commandes').select('statut, prix, created_at');
     const list = orders || [];
     const counts = { en_attente: 0, coursier_affecte: 0, en_route: 0, livre: 0, annule: 0 };
     let revenue = 0;
@@ -323,8 +323,8 @@
   });
 
   async function loadOrders() {
-    if (!supabase) return;
-    let query = supabase.from('commandes').select('*').order('created_at', { ascending: false }).limit(100);
+    if (!sb) return;
+    let query = sb.from('commandes').select('*').order('created_at', { ascending: false }).limit(100);
     if (currentFilter !== 'all') query = query.eq('statut', currentFilter);
     const { data } = await query;
     renderOrders(data || []);
@@ -371,7 +371,7 @@
       const coursierId = card.querySelector('.sel-coursier').value || null;
       const statut = card.querySelector('.sel-statut').value;
       const prixVal = card.querySelector('.prix').value;
-      const { error } = await supabase.from('commandes').update({
+      const { error } = await sb.from('commandes').update({
         coursier_id: coursierId,
         statut: statut,
         prix: prixVal ? Number(prixVal) : null
@@ -408,7 +408,7 @@
       `;
       row.querySelector('[data-action="toggle"]').addEventListener('click', async (e) => {
         const newActif = !(e.target.dataset.actif === 'true');
-        await supabase.from('coursiers').update({ actif: newActif }).eq('id', c.id);
+        await sb.from('coursiers').update({ actif: newActif }).eq('id', c.id);
         loadAll();
       });
       container.appendChild(row);
@@ -421,7 +421,7 @@
     const pin = document.getElementById('newCoursierPin').value.trim();
     const vehicule = document.getElementById('newCoursierVehicule').value.trim() || 'moto';
     if (!nom || !tel || pin.length !== 4) { alert('Nom, téléphone et PIN à 4 chiffres requis.'); return; }
-    const { error } = await supabase.from('coursiers').insert({
+    const { error } = await sb.from('coursiers').insert({
       nom, telephone: tel, pin_code: pin, vehicule, statut: 'hors_ligne', actif: true
     });
     if (error) { alert("Erreur : ce numéro existe peut-être déjà."); return; }
@@ -433,8 +433,8 @@
 
   // ---------- Zones tarifaires ----------
   async function loadZones() {
-    if (!supabase) return;
-    const { data } = await supabase.from('zones_tarifs').select('*').order('nom_zone', { ascending: true });
+    if (!sb) return;
+    const { data } = await sb.from('zones_tarifs').select('*').order('nom_zone', { ascending: true });
     renderZones(data || []);
   }
 
@@ -459,7 +459,7 @@
       row.querySelector('[data-action="save"]').addEventListener('click', async () => {
         const base = Number(row.querySelector('.base').value);
         const km = Number(row.querySelector('.km').value);
-        await supabase.from('zones_tarifs').update({ tarif_base: base, tarif_km: km }).eq('id', z.id);
+        await sb.from('zones_tarifs').update({ tarif_base: base, tarif_km: km }).eq('id', z.id);
         loadZones();
       });
       container.appendChild(row);
@@ -471,7 +471,7 @@
     const base = Number(document.getElementById('newZoneBase').value) || 500;
     const km = Number(document.getElementById('newZoneKm').value) || 150;
     if (!nom) { alert('Nom de zone requis.'); return; }
-    const { error } = await supabase.from('zones_tarifs').insert({ nom_zone: nom, tarif_base: base, tarif_km: km });
+    const { error } = await sb.from('zones_tarifs').insert({ nom_zone: nom, tarif_base: base, tarif_km: km });
     if (error) { alert('Erreur lors de l\'ajout.'); return; }
     document.getElementById('newZoneNom').value = '';
     document.getElementById('newZoneBase').value = '';
@@ -481,9 +481,9 @@
 
   // ---------- Temps réel ----------
   function subscribeRealtime() {
-    if (!supabase) return;
-    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
-    realtimeChannel = supabase.channel('admin-live')
+    if (!sb) return;
+    if (realtimeChannel) sb.removeChannel(realtimeChannel);
+    realtimeChannel = sb.channel('admin-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'commandes' }, () => { loadOrders(); loadStats(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'coursiers' }, () => loadAll())
       .subscribe();
