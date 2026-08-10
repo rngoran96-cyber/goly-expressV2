@@ -215,12 +215,12 @@
   // CONFIGURATION
   // ============================================================
   const CONFIG = {
-    SUPABASE_URL: "https://zzzstnwbzqxujuskjrdk.supabase.co",
-    SUPABASE_ANON_KEY: "sb_publishable_Xp5XULUX_I4Q_rCqKKHN4A_txr_eMGG",
+    SUPABASE_URL: "",https://zfdsajphouocfjovctcc.supabase.co/rest/v1/
+    SUPABASE_ANON_KEY: "",sb_publishable_LY2urmNct0nnVp_uUhLvlg_NfHuS-Kw
     // Choisis un mot de passe et remplace la valeur ci-dessous.
     // ⚠️ Ce mot de passe est visible dans le code source du site — voir
     // la note de sécurité dans supabase-migration-phase3.sql.
-    ADMIN_PASSWORD: "golyexpress2026"
+    ADMIN_PASSWORD: "PH@REL"
   };
 
   const sb = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
@@ -415,9 +415,13 @@
     });
   }
 
+  function normTel(t) {
+    return t.replace(/\s+/g, '').replace(/^\+225/, '').replace(/^225/, '');
+  }
+
   document.getElementById('addCoursierBtn').addEventListener('click', async () => {
     const nom = document.getElementById('newCoursierNom').value.trim();
-    const tel = document.getElementById('newCoursierTel').value.trim();
+    const tel = normTel(document.getElementById('newCoursierTel').value.trim());
     const pin = document.getElementById('newCoursierPin').value.trim();
     const vehicule = document.getElementById('newCoursierVehicule').value.trim() || 'moto';
     if (!nom || !tel || pin.length !== 4) { alert('Nom, téléphone et PIN à 4 chiffres requis.'); return; }
