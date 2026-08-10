@@ -169,8 +169,8 @@
   // CONFIGURATION — mêmes valeurs que index.html
   // ============================================================
   const CONFIG = {
-    SUPABASE_URL: "https://zzzstnwbzqxujuskjrdk.supabase.co",
-    SUPABASE_ANON_KEY: "sb_publishable_Xp5XULUX_I4Q_rCqKKHN4A_txr_eMGG"
+    SUPABASE_URL: "",
+    SUPABASE_ANON_KEY: ""
   };
 
   const sb = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
@@ -186,6 +186,7 @@
   };
   let map, courierMarker, destMarker;
   let currentCommandeId = null;
+  let currentCoursierId = null;
   let realtimeChannel = null;
 
   function initMap() {
@@ -271,6 +272,7 @@
       updateCourierPosition(coursier);
     }
 
+    currentCoursierId = data.coursier_id;
     subscribeRealtime(data.id, data.coursier_id);
 
     // Mémorise le dernier billet consulté dans l'URL (partage facile)
@@ -281,12 +283,21 @@
 
   function subscribeRealtime(commandeId, coursierId) {
     if (realtimeChannel) sb.removeChannel(realtimeChannel);
-    realtimeChannel = sb.channel('suivi-' + commandeId)
+    let channel = sb.channel('suivi-' + commandeId)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commandes', filter: `id=eq.${commandeId}` },
-        (payload) => renderCommande(payload.new))
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'coursiers', filter: coursierId ? `id=eq.${coursierId}` : undefined },
-        (payload) => updateCourierPosition(payload.new))
-      .subscribe();
+        (payload) => {
+          renderCommande(payload.new);
+          if (payload.new.coursier_id && payload.new.coursier_id !== currentCoursierId) {
+            currentCoursierId = payload.new.coursier_id;
+            subscribeRealtime(commandeId, currentCoursierId);
+          }
+        });
+
+    const coursierConfig = { event: 'UPDATE', schema: 'public', table: 'coursiers' };
+    if (coursierId) coursierConfig.filter = `id=eq.${coursierId}`;
+    channel = channel.on('postgres_changes', coursierConfig, (payload) => updateCourierPosition(payload.new));
+
+    realtimeChannel = channel.subscribe();
   }
 
   document.getElementById('lookupBtn').addEventListener('click', () => {
