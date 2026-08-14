@@ -215,12 +215,12 @@
   // CONFIGURATION
   // ============================================================
   const CONFIG = {
-    SUPABASE_URL: "https://zfdsajphouocfjovctcc.supabase.co",
-    SUPABASE_ANON_KEY: "ssb_publishable_LY2urmNct0nnVp_uUhLvlg_NfHuS-Kw",
+    SUPABASE_URL: "",
+    SUPABASE_ANON_KEY: "",
     // Choisis un mot de passe et remplace la valeur ci-dessous.
     // ⚠️ Ce mot de passe est visible dans le code source du site — voir
     // la note de sécurité dans supabase-migration-phase3.sql.
-    ADMIN_PASSWORD: "PH@REL"
+    ADMIN_PASSWORD: "golyexpress2026"
   };
 
   const sb = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)
@@ -428,7 +428,7 @@
     const { error } = await sb.from('coursiers').insert({
       nom, telephone: tel, pin_code: pin, vehicule, statut: 'hors_ligne', actif: true
     });
-    if (error) { alert("Erreur : ce numéro existe peut-être déjà."); return; }
+    if (error) { alert("Erreur technique — détail :\n\n" + (error.message || JSON.stringify(error)) + "\n\n(Code : " + (error.code || 'inconnu') + ")"); return; }
     document.getElementById('newCoursierNom').value = '';
     document.getElementById('newCoursierTel').value = '';
     document.getElementById('newCoursierPin').value = '';
